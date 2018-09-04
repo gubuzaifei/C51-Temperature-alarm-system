@@ -1,0 +1,408 @@
+C51 COMPILER V9.01   MAIN                                                                  09/04/2018 14:03:35 PAGE 1   
+
+
+C51 COMPILER V9.01, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN main.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE main.c BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include<reg51.h>
+   2          #include<math.h>
+   3          #define uchar unsigned char
+   4          #define uint unsigned int
+   5          
+   6          sbit LEDRED = P1^0;
+   7          sbit LEDBLUE = P1^3;
+   8          sbit buzz = P2^3;//蜂鸣器控制端接口
+   9          sbit key1 = P3^0;//设置温度
+  10          sbit key2 = P3^1;//温度加
+  11          sbit key3 = P3^2;//温度减
+  12          sbit dula = P2^6;//数码管段选
+  13          sbit wela = P2^7;//数码管位选
+  14          /////共阴数码管段选//////////////////////////////////////////////
+  15          uchar table[22]=
+  16          {0x3F,0x06,0x5B,0x4F,0x66,               //     0,1,2,3,4
+  17          0x6D,0x7D,0x07,0x7F,0x6F,                //     5,6,7,8,9
+  18          0x77,0x7C,0x39,0x5E,0x79,0x71,   //     A,B,C,D,E,F
+  19          0x40,0x38,0x76,0x00,0xff,0x37};//'-',L,H,灭,全亮，n    16-21
+  20          unsigned char code table1[]=
+  21          {0xBF,0x86,0xDB,0xCF,0xE6,
+  22          0xED,0xFD,0x87,0xFF,0xEF};
+  23           
+  24          uchar byte_read(unsigned int byte_addr);     //字节读 
+  25          void SectorErase(unsigned int sector_addr);  //扇区擦除 
+  26          void byte_write(unsigned int byte_addr,char dat);  //字节写
+  27          extern void ReadTemperature();
+  28          int wen_du;     //温度变量  
+  29          int high,low;   //对比温度暂存变量
+  30          uchar flag,a_a; //当前按键状态标志
+  31          uchar d1,d2,d2t,d3,d4; //显示数据暂存变量
+  32          
+  33          void delay(uint ms)//延时函数，大约延时25us
+  34          {
+  35   1              uchar x;
+  36   1              for(ms;ms>0;ms--)
+  37   1              {
+  38   2                      for(x=10;x>0;x--);
+  39   2              }
+  40   1      }
+  41          
+  42          void display()//显示实时温度
+  43          {       
+  44   1              /*dula = 0;
+  45   1              P0 = table[d1];
+  46   1              delay(10);//第1位
+  47   1              dula = 1;
+  48   1              dula = 0;
+  49   1              wela = 0;
+  50   1              P0 = 0xfe;
+  51   1              wela = 1;
+  52   1              wela = 0;
+  53   1              delay(1);*/
+  54   1                                
+  55   1              dula=0;
+C51 COMPILER V9.01   MAIN                                                                  09/04/2018 14:03:35 PAGE 2   
+
+  56   1              P0=table[d1];
+  57   1              delay(10);//第2位
+  58   1              dula=1;
+  59   1              dula=0;
+  60   1              wela=0;
+  61   1              P0=0xfd;
+  62   1              wela=1;
+  63   1              wela=0;
+  64   1              delay(1);
+  65   1              
+  66   1              dula=0;
+  67   1              P0=table1[d2];
+  68   1              delay(10);//第3位
+  69   1              dula=1;
+  70   1              dula=0;
+  71   1              wela=0;
+  72   1              P0=0xfb;
+  73   1              wela=1;
+  74   1              wela=0;
+  75   1              delay(1);
+  76   1              
+  77   1              dula=0;
+  78   1              P0=table[d3];
+  79   1              delay(10);//第4位
+  80   1              dula=1;
+  81   1              dula=0;
+  82   1              wela=0;
+  83   1              P0=0xf7;
+  84   1              wela=1;
+  85   1              wela=0;
+  86   1              delay(1);
+  87   1      }
+  88          void display1()//显示调整温度  100-125   -55-(-1)
+  89          {       
+  90   1              dula = 0;
+  91   1              P0 = table[d1];
+  92   1              delay(10);//第1位
+  93   1              dula = 1;
+  94   1              dula = 0;
+  95   1              wela = 0;
+  96   1              P0 = 0xfe;
+  97   1              wela = 1;
+  98   1              wela = 0;
+  99   1              delay(1);
+ 100   1                                
+ 101   1              dula=0;
+ 102   1              P0=table[d2];
+ 103   1              delay(10);//第2位
+ 104   1              dula=1;
+ 105   1              dula=0;
+ 106   1              wela=0;
+ 107   1              P0=0xfd;
+ 108   1              wela=1;
+ 109   1              wela=0;
+ 110   1              delay(1);
+ 111   1              
+ 112   1              dula=0;
+ 113   1              P0=table[d3];
+ 114   1              delay(10);//第3位
+ 115   1              dula=1;
+ 116   1              dula=0;
+ 117   1              wela=0;
+C51 COMPILER V9.01   MAIN                                                                  09/04/2018 14:03:35 PAGE 3   
+
+ 118   1              P0=0xfb;
+ 119   1              wela=1;
+ 120   1              wela=0;
+ 121   1              delay(1);
+ 122   1              
+ 123   1              dula=0;
+ 124   1              P0=table[d4];
+ 125   1              delay(10);//第4位
+ 126   1              dula=1;
+ 127   1              dula=0;
+ 128   1              wela=0;
+ 129   1              P0=0xf7;
+ 130   1              wela=1;
+ 131   1              wela=0;
+ 132   1              delay(1);
+ 133   1      }
+ 134          void display2()//显示调整温度  0-99
+ 135          {       
+ 136   1              dula = 0;
+ 137   1              P0 = table[d1];
+ 138   1              delay(10);//第1位
+ 139   1              dula = 1;
+ 140   1              dula = 0;
+ 141   1              wela = 0;
+ 142   1              P0 = 0xfe;
+ 143   1              wela = 1;
+ 144   1              wela = 0;
+ 145   1              delay(1);
+ 146   1              
+ 147   1              dula=0;
+ 148   1              P0=table[d2];
+ 149   1              delay(10);//第3位
+ 150   1              dula=1;
+ 151   1              dula=0;
+ 152   1              wela=0;
+ 153   1              P0=0xfb;
+ 154   1              wela=1;
+ 155   1              wela=0;
+ 156   1              delay(1);
+ 157   1              
+ 158   1              dula=0;
+ 159   1              P0=table[d3];
+ 160   1              delay(10);//第4位
+ 161   1              dula=1;
+ 162   1              dula=0;
+ 163   1              wela=0;
+ 164   1              P0=0xf7;
+ 165   1              wela=1;
+ 166   1              wela=0;
+ 167   1              delay(1);
+ 168   1      }
+ 169          
+ 170          void keyscan()//按键扫描函数
+ 171          {
+ 172   1              int i;
+ 173   1              if(key1==0)              //设置键按下
+ 174   1          {
+ 175   2              delay(300);          //延时去抖
+ 176   2              if(key1==0)
+ 177   2                      {
+ 178   3                              flag=1;            //再次判断按键，按下的话进入设置状态
+ 179   3              }
+C51 COMPILER V9.01   MAIN                                                                  09/04/2018 14:03:35 PAGE 4   
+
+ 180   2                      while(key1==0);         //松手检测                  
+ 181   2          }
+ 182   1          while(flag==1)              //进入设置上限状态
+ 183   1          {
+ 184   2              d1=18;                           //显示字母H
+ 185   2                      if(high>=100)
+ 186   2                      {       
+ 187   3                              d2=1;                //数码管第2位显示数字1  
+ 188   3                              d3=high%100/10;
+ 189   3                              d4=high%100%10;     //上限温度值
+ 190   3                      display1();                //调用显示函数
+ 191   3                      }
+ 192   2                      else if(high<100&&high>=0)
+ 193   2                      {
+ 194   3                              d2=high/10;
+ 195   3                              d3=high%10;                      //上限温度值
+ 196   3                              display2();                     //调用显示函数
+ 197   3                      }
+ 198   2                      else
+ 199   2                      {
+ 200   3                              i=abs(high);            //取绝对值
+ 201   3                              d2=16;                          //数码管第2位显示负号-
+ 202   3                              d3=i/10;
+ 203   3                              d4=i%10;            //上限温度值
+ 204   3                      display1();                //调用显示函数
+ 205   3                      }              
+ 206   2              if(key1==0)             //判断设置键是否按下
+ 207   2              {
+ 208   3                      delay(300);         //延时去抖
+ 209   3                  if(key1==0)
+ 210   3                              {
+ 211   4                                      flag=2;         //按键按下，进入设置下限模式
+ 212   4                  }
+ 213   3                              while(key1==0);     //松手检测
+ 214   3              }
+ 215   2              if(key2==0)             //加键按下
+ 216   2              {
+ 217   3                      delay(300);         //延时去抖
+ 218   3                  if(key2==0)         //加键按下
+ 219   3                  {
+ 220   4                      high+=1;        //上限加1
+ 221   4                      if(high>=125)
+ 222   4                                      {
+ 223   5                                              high=125;    //上限最大加到125
+ 224   5                      }
+ 225   4                              }
+ 226   3                              while(key2==0);     //松手检测
+ 227   3              }
+ 228   2              if(key3==0)             //减键按下
+ 229   2              {
+ 230   3                      delay(300);          //延时去抖
+ 231   3                  if(key3==0)         //减键按下
+ 232   3                  {
+ 233   4                      high-=1;        //上限减1
+ 234   4                      if(high<=-55)
+ 235   4                                      {
+ 236   5                                              high=-55;    //上限最小减到-55
+ 237   5                      }
+ 238   4                              }
+ 239   3                              while(key3==0);     //松手检测
+ 240   3              }               
+ 241   2              }
+C51 COMPILER V9.01   MAIN                                                                  09/04/2018 14:03:35 PAGE 5   
+
+ 242   1          while(flag==2)              //设置下限
+ 243   1          {
+ 244   2              d1=17;                                  //显示字母L
+ 245   2                      if(low>=100)
+ 246   2                      {       
+ 247   3                              d2=1;                //数码管第2位显示数字1  
+ 248   3                              d3=low%100/10;
+ 249   3                              d4=low%100%10;      //下限温度值
+ 250   3                      display1();                //调用显示函数
+ 251   3                      }
+ 252   2                      else if(low<100&&low>=0)
+ 253   2                      {
+ 254   3                              d2=low/10;
+ 255   3                              d3=low%10;              //下限温度值
+ 256   3                              display2();             //调用显示函数
+ 257   3                      }
+ 258   2                      else
+ 259   2                      {
+ 260   3                              i=abs(low);             //取绝对值
+ 261   3                              d2=16;
+ 262   3                              d3=i/10;
+ 263   3                              d4=i%10;        //下限温度值
+ 264   3                      display1();             //调用显示函数
+ 265   3                      }
+ 266   2              if(key1==0)
+ 267   2              {
+ 268   3                      delay(300);
+ 269   3                  if(key1==0)
+ 270   3                              {
+ 271   4                                      flag=0;
+ 272   4                              }
+ 273   3                  while(key1==0);     //松手检测
+ 274   3                      SectorErase(0x2e00);//擦除扇区命令
+ 275   3                      byte_write(0x2e00,high%256);//把high（温度上限）写入扇区
+ 276   3                      byte_write(0x2e01,high/256);
+ 277   3                              
+ 278   3                              byte_write(0x2e20,low%256); //把low（温度下限）写入扇区
+ 279   3                      byte_write(0x2e21,low/256); 
+ 280   3                                       
+ 281   3                      byte_write(0x2e55,a_a);  //把a_a的值写入扇区
+ 282   3                      }
+ 283   2              if(key2==0)
+ 284   2              {
+ 285   3                      delay(300);
+ 286   3                  if(key2==0)
+ 287   3                  {
+ 288   4                      low+=1;
+ 289   4                      if(low>=125)
+ 290   4                                      {
+ 291   5                                              low=125;
+ 292   5                                      }       
+ 293   4                  }
+ 294   3                              while(key2==0);      //松手检测
+ 295   3              }
+ 296   2              if(key3==0)
+ 297   2              {
+ 298   3                      delay(300);
+ 299   3                  if(key3==0)
+ 300   3                  {
+ 301   4                      low-=1;
+ 302   4                      if(low<=-55)
+ 303   4                                      {
+C51 COMPILER V9.01   MAIN                                                                  09/04/2018 14:03:35 PAGE 6   
+
+ 304   5                                              low=-55;
+ 305   5                                      }       
+ 306   4                  }
+ 307   3                              while(key3==0);//松手检测
+ 308   3              }                              
+ 309   2              }
+ 310   1                      
+ 311   1      }
+ 312          void zi_dong()//自动温控模式
+ 313          {
+ 314   1              d1=wen_du/100;
+ 315   1              d2t=wen_du%100;
+ 316   1              d2=d2t/10;
+ 317   1              d3=d2t%10;
+ 318   1          keyscan();          //按键扫描函数
+ 319   1          display();          //调用显示函数
+ 320   1          if((wen_du/10)<=low)        //低温警报
+ 321   1              {
+ 322   2                      //buzz=0;
+ 323   2                      LEDBLUE = 0;
+ 324   2              }                       //低于下限 蜂鸣器响亮蓝灯
+ 325   1          if(((wen_du/10)>low)&&((wen_du/10)<high))//温度大于下限，小于上限 
+ 326   1          {                                                                                        
+ 327   2              buzz = 1;
+ 328   2                      P1 = 0xff;                   
+ 329   2          }
+ 330   1          if((wen_du/10)>=high)        //高温警报
+ 331   1              {
+ 332   2                      //buzz = 0;
+ 333   2                      LEDRED = 0;
+ 334   2              }                       //高于上限 蜂鸣器响亮红灯
+ 335   1      }
+ 336          void main()                  //主函数
+ 337          {       
+ 338   1              uint j;
+ 339   1              high = byte_read(0x2e01);//程序开始时读取EEPROM中的数据（读取上限） 
+ 340   1          high <<= 8;
+ 341   1          high |= byte_read(0x2e00);
+ 342   1          if(high>200)
+ 343   1              {
+ 344   2                      high = high - 256;
+ 345   2              }
+ 346   1              low = byte_read(0x2e21);//        程序开始时读取EEPROM中的数据（读取下限）        
+ 347   1          low <<= 8;
+ 348   1          low |= byte_read(0x2e20);
+ 349   1          if(low>200)
+ 350   1              {
+ 351   2                      low = low - 256;
+ 352   2              }
+ 353   1              a_a = byte_read(0x2e55);//         
+ 354   1          if(a_a!=22) //防止首次上电时读取出错 
+ 355   1          {
+ 356   2              high=30;        //第一次上电温度上限为30.C    
+ 357   2              low=20;         //第一次上电温度下限为20.C
+ 358   2              a_a=22;
+ 359   2              }          
+ 360   1              delay(150);     
+ 361   1          for(j=0;j<80;j++)          //先读取温度值，防止开机显示85
+ 362   1          {
+ 363   2                      ReadTemperature();
+ 364   2          }
+ 365   1              while(1)                          //进入while循环
+C51 COMPILER V9.01   MAIN                                                                  09/04/2018 14:03:35 PAGE 7   
+
+ 366   1          {       
+ 367   2              ReadTemperature();        //读取温度值
+ 368   2              for(j=0;j<100;j++)
+ 369   2                      {
+ 370   3                              zi_dong();//温控模式
+ 371   3                      }
+ 372   2          }
+ 373   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1251    ----
+   CONSTANT SIZE    =     10    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     35       4
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
