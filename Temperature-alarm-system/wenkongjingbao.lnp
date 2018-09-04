@@ -1,0 +1,6 @@
+"STARTUP.obj",
+"main.obj",
+"ISP.obj",
+"DS18B20.obj" 
+TO "wenkongjingbao" 
+RAMSIZE(256) 
